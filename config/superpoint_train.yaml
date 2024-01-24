@@ -1,10 +1,10 @@
 data:
     name: 'coco'
     resize: [240,320]
-    image_train_path: ['./data/mg_syn_coco_15e-3/images/train2017',]
-    label_train_path: ['./data/mg_syn_coco_15e-3/labels/train2017/',]
-    image_test_path: './data/mg_syn_coco_15e-3/images/test2017/'
-    label_test_path: './data/mg_syn_coco_15e-3/labels/test2017/'
+    image_train_path: ['./data/mg_coco_coco_3e-2/images/train2017',]
+    label_train_path: ['./data/mg_coco_coco_3e-2/labels/train2017/',]
+    image_test_path: './data/mg_coco_coco_3e-2/images/test2017/'
+    label_test_path: './data/mg_coco_coco_3e-2/labels/test2017/'
     augmentation:
         photometric:
             train_enable: true
@@ -41,7 +41,7 @@ model:
     name: 'superpoint'
     using_bn: true
     grid_size: 8
-    pretrained_model: 'none'
+    pretrained_model: '/root/workspace/code/mine/SuperPoint-Pytorch/superpoint_bn.pth'
     backbone:
         backbone_type: 'VGG'
         vgg:
@@ -66,4 +66,8 @@ solver:
     train_batch_size: 2
     test_batch_size: 2
     save_dir: './export/'
-    model_name: 'sp'
+    model_name: 'SBC'
+    experiment_name : '1.superpoint_bn_coco'
+    experiment_detail : 'raw superPoint_bn in COCO'
+    img_watch_path : '/root/workspace/code/mine/SuperPoint-Pytorch/data/coco/images/val2017/000000016439.jpg'
+    

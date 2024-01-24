@@ -4,7 +4,7 @@ import cv2
 from math import pi
 from numpy.random import uniform
 from scipy.stats import truncnorm
-import kornia
+from kornia.geometry.transform import warp_perspective as warp_perspective_kornia
 from utils.params import dict_update
 from utils.tensor_op import erosion2d
 from utils.keypoint_op import *
@@ -26,7 +26,7 @@ def homographic_aug_pipline(img, pts, config, device='cpu'):
     homography = sample_homography(image_shape, config['params'], device=device)
     ##
     #warped_image = cv2.warpPerspective(img, homography, tuple(image_shape[::-1]))
-    warped_image = kornia.warp_perspective(img, homography, image_shape, align_corners=True)
+    warped_image = warp_perspective_kornia(img, homography, image_shape, align_corners=True)
 
     warped_valid_mask = compute_valid_mask(image_shape, homography, config['valid_border_margin'], device=device)
 
@@ -63,7 +63,7 @@ def compute_valid_mask(image_shape, homographies, erosion_radius=0, device='cpu'
     # homographies = torch.linalg.inv(homographies)
     B = homographies.shape[0]
     img_one = torch.ones(tuple([B,1,*image_shape]),device=device, dtype=torch.float32)#B,C,H,W
-    mask = kornia.warp_perspective(img_one, homographies, tuple(image_shape), align_corners=True)
+    mask = warp_perspective_kornia(img_one, homographies, tuple(image_shape), align_corners=True)
     mask = mask.round()#B1HW
     #mask = cv2.warpPerspective(np.ones(image_shape), homography, dsize=tuple(image_shape[::-1]))#dsize=tuple([w,h])
     if erosion_radius > 0:
@@ -193,7 +193,7 @@ def ratio_preserving_resize(img, target_size):
     '''
     scales = np.array((target_size[0]/img.shape[0], target_size[1]/img.shape[1]))##h_s,w_s
 
-    new_size = np.round(np.array(img.shape)*np.max(scales)).astype(np.int)#
+    new_size = np.round(np.array(img.shape)*np.max(scales)).astype(int)#
     temp_img = cv2.resize(img, tuple(new_size[::-1]))
     curr_h, curr_w = temp_img.shape
     target_h, target_w = target_size

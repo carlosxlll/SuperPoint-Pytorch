@@ -2,6 +2,8 @@
 import numpy as np
 import torch
 import torch.nn.functional as F
+import sys
+sys.path.append('/root/workspace/code/mine/SuperPoint-Pytorch/')
 from utils.keypoint_op import warp_points
 from utils.tensor_op import pixel_shuffle_inv
 
@@ -24,7 +26,7 @@ def loss_func(config, data, prob, desc=None, prob_warp=None, desc_warp=None, dev
                                   config['grid_size'],
                                   device=device)
 
-    weighted_des_loss = descriptor_loss(config,
+    weighted_des_loss, positive_sum, negative_sum = descriptor_loss(config,
                                desc['desc_raw'],
                                desc_warp['desc_raw'],
                                data['homography'],
@@ -34,8 +36,7 @@ def loss_func(config, data, prob, desc=None, prob_warp=None, desc_warp=None, dev
     loss = det_loss + det_loss_warp + weighted_des_loss
 
     a, b, c = det_loss.item(), det_loss_warp.item(), weighted_des_loss.item()
-    print('debug: {:.3f}, {:.3f}, {:.3f}, {:.3f}'.format(a, b,c,a+b+c))
-    return loss
+    return loss, det_loss, det_loss_warp, weighted_des_loss, positive_sum, negative_sum
 
 def detector_loss(keypoint_map, logits, valid_mask=None, grid_size=8, device='cpu'):
     """
@@ -155,11 +156,10 @@ def descriptor_loss(config, descriptors, warped_descriptors, homographies, valid
     positive_sum = torch.sum(valid_mask*lambda_d*s*positive_dist) / normalization
     negative_sum = torch.sum(valid_mask*(1-s)*negative_dist) / normalization
 
-    print('positive_dist:{:.7f}, negative_dist:{:.7f}'.format(positive_sum, negative_sum))
 
     loss = lambda_loss*torch.sum(valid_mask * loss)/normalization
 
-    return loss
+    return loss, positive_sum, negative_sum
 
 
 def precision_recall(pred, keypoint_map, valid_mask):
@@ -183,7 +183,7 @@ if __name__=='__main__':
     import tensorflow as tf
     def detector_loss_tf(keypoint_map, logits, valid_mask=None):
         # Convert the boolean labels to indices including the "no interest point" dustbin
-        labels = tf.to_float(keypoint_map[..., tf.newaxis])  # for GPU
+        labels = tf.cast(keypoint_map[..., tf.newaxis])  # for GPU
         labels = tf.space_to_depth(labels, 8)
         shape = tf.concat([tf.shape(labels)[:3], [1]], axis=0)
         labels = tf.concat([2 * labels, tf.ones(shape)], 3)
@@ -209,7 +209,7 @@ if __name__=='__main__':
     h = np.array([[1,0.5,0],[0.5,1,0],[0,0,1]]).astype(np.float32)
     mask = cv2.warpPerspective(np.ones([24,32]), h, (32,24))
     mask = np.stack([mask,mask])
-    mask = mask.astype(np.int).astype(np.float32)
+    mask = mask.astype(int).astype(np.float32)
     ##
     loss = detector_loss_tf(keypoint_map, np.transpose(logits, (0,2,3,1)), valid_mask=mask)
 

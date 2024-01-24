@@ -4,6 +4,8 @@ import numpy as np
 from tqdm import tqdm
 from pathlib import Path
 from torch.utils.data import Dataset
+import sys
+sys.path.append('/root/workspace/code/mine/SuperPoint-Pytorch')
 from utils.params import dict_update, parse_primitives
 from utils.keypoint_op import compute_keypoint_map
 from dataset.utils import synthetic_dataset
@@ -97,8 +99,8 @@ class SyntheticShapes(Dataset):
 
                 b = self.config['preprocessing']['blur_size']
                 image = cv2.GaussianBlur(image, (b, b), 0)
-                points = (points * np.array(self.config['preprocessing']['resize'], np.float)
-                          / np.array(self.config['generation']['image_size'], np.float))
+                points = (points * np.array(self.config['preprocessing']['resize'], float)
+                          / np.array(self.config['generation']['image_size'], float))
                 image = cv2.resize(image, tuple(self.config['preprocessing']['resize'][::-1]),
                                    interpolation=cv2.INTER_LINEAR)
 
@@ -206,7 +208,7 @@ if __name__=="__main__":
     from torch.utils.data import DataLoader
     import matplotlib.pyplot as plt
 
-    config_file = '../config/magic_point_syn_train.yaml'
+    config_file = '/root/workspace/code/mine/SuperPoint-Pytorch/config/magic_point_syn_train.yaml'
     device = 'cpu'#'cuda:3' if torch.cuda.is_available() else 'cpu'
     with open(config_file, 'r') as fin:
         config = yaml.safe_load(fin)
@@ -220,16 +222,16 @@ if __name__=="__main__":
     for i, d in enumerate(data_loaders['train']):
         if i >= 10:
             break
-        img = (d['raw']['img'][0] * 255).cpu().numpy().squeeze().astype(np.int).astype(np.uint8)
+        img = (d['raw']['img'][0] * 255).cpu().numpy().squeeze().astype(int).astype(np.uint8)
         img = cv2.merge([img, img, img])
         ##
         kpts = np.where(d['raw']['kpts_map'][0].squeeze().cpu().numpy())
         kpts = np.vstack(kpts).T
-        kpts = np.round(kpts).astype(np.int)
+        kpts = np.round(kpts).astype(int)
         for kp in kpts:
             cv2.circle(img, (kp[1], kp[0]), radius=3, color=(0, 255, 0))
 
-        mask = d['raw']['mask'][0].cpu().numpy().squeeze().astype(np.int).astype(np.uint8)*255
+        mask = d['raw']['mask'][0].cpu().numpy().squeeze().astype(int).astype(np.uint8)*255
 
         img = cv2.resize(img, (img.shape[1] * 2, img.shape[0] * 2))
 
@@ -237,5 +239,5 @@ if __name__=="__main__":
         plt.imshow(img)
         plt.subplot(1, 2, 2)
         plt.imshow(mask)
-        plt.show()
+        plt.savefig('/root/workspace/code/mine/superPoint_my/data/sample/ss{}.png'.format(i))
 

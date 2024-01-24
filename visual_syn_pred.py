@@ -26,7 +26,7 @@ with torch.no_grad():
     for i, data in tqdm(enumerate(dataloader_)):
         ret = net(data['raw']['img'])
         ##debug
-        if i > 10:
+        if i > 2:
             break
         warp_img = (data['raw']['img'] * 255).cpu().numpy().squeeze().astype(np.int).astype(np.uint8)
         warp_img = cv2.merge((warp_img, warp_img, warp_img))
@@ -36,6 +36,6 @@ with torch.no_grad():
         for kp in keypoints:
             cv2.circle(warp_img, (int(kp[1]), int(kp[0])), radius=3, color=(0, 255, 0))
         plt.imshow(warp_img)
-        plt.show()
+        plt.savefig("./data/sample/aa{}.jpg".format(i))
 
 print('Done')

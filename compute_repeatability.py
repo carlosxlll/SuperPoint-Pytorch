@@ -57,7 +57,7 @@ def select_top_k(prob, thresh=0, num=300):
 
 if __name__=='__main__':
 
-    experiments = ['./data/repeatibility/hpatches/sp']
+    experiments = ['./data/repeatibility/hpatches/v']
     confidence_thresholds = [0.015, ]
 
     ## show keypoints
@@ -65,8 +65,8 @@ if __name__=='__main__':
         for e, thresh in zip(experiments, confidence_thresholds):
             path = os.path.join(e, str(i) + ".npz")
             d = np.load(path)
-            img = np.round(d['img']*255).astype(np.int).astype(np.uint8)
-            warp_img = np.round(d['warp_img']*255).astype(np.int).astype(np.uint8)
+            img = np.round(d['img']*255).astype(int).astype(np.uint8)
+            warp_img = np.round(d['warp_img']*255).astype(int).astype(np.uint8)
 
             points1 = select_top_k(d['prob'], thresh=thresh)
             im1 = draw_keypoints(img, points1, (0, 255, 0))/255.

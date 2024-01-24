@@ -3,7 +3,7 @@ import os
 import torch
 from tqdm import tqdm
 from math import pi
-import kornia
+from kornia.geometry.transform import warp_perspective as warp_perspective_kornia
 import cv2
 import numpy as np
 from utils.params import dict_update
@@ -11,6 +11,8 @@ from solver.nms import box_nms
 from utils.tensor_op import erosion2d
 from dataset.utils.homographic_augmentation import sample_homography,ratio_preserving_resize
 from model.magic_point import MagicPoint
+from torch.utils.data import Dataset, DataLoader
+from torchvision.transforms import ToTensor
 
 
 homography_adaptation_default_config = {
@@ -63,9 +65,9 @@ def one_adaptation(net, raw_image, probs, counts, images, config, device='cpu'):
     M = sample_homography(shape=[H, W], config=config['homographies'],device=device)
     M_inv = torch.inverse(M)
     ##
-    warped = kornia.warp_perspective(raw_image, M, dsize=(H,W), align_corners=True)
-    mask = kornia.warp_perspective(torch.ones([B,1,H,W], device=device), M, dsize=(H, W), mode='nearest',align_corners=True)
-    count = kornia.warp_perspective(torch.ones([B,1,H,W],device=device), M_inv, dsize=(H,W), mode='nearest',align_corners=True)
+    warped = warp_perspective_kornia(raw_image, M, dsize=(H,W), align_corners=True)
+    mask = warp_perspective_kornia(torch.ones([B,1,H,W], device=device), M, dsize=(H, W), mode='nearest',align_corners=True)
+    count = warp_perspective_kornia(torch.ones([B,1,H,W],device=device), M_inv, dsize=(H,W), mode='nearest',align_corners=True)
 
     # Ignore the detections too close to the border to avoid artifacts
     if config['valid_border_margin']:
@@ -84,7 +86,7 @@ def one_adaptation(net, raw_image, probs, counts, images, config, device='cpu'):
     prob = net(warped)
     prob = prob['prob']
     prob = prob * mask
-    prob_proj = kornia.warp_perspective(prob.unsqueeze(dim=1), M_inv, dsize=(H,W), align_corners=True)
+    prob_proj = warp_perspective_kornia(prob.unsqueeze(dim=1), M_inv, dsize=(H,W), align_corners=True)
     prob_proj = prob_proj.squeeze(dim=1)#B,H,W
     prob_proj = prob_proj * count#project back
     ##
@@ -160,9 +162,10 @@ if __name__=='__main__':
     # image_list = image_list[0:int(len(image_list)*0.5)]
 
     device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
+    print(device, 'using....')
 
-    net = MagicPoint(config['model'], input_channel=1, grid_size=8,device=device)
-    net.load_state_dict(torch.load(config['model']['pretrained_model']))
+    net = MagicPoint(config['model'], input_channel=1, grid_size=8,device=device, using_bn=True)
+    net.load_state_dict(torch.load(config['model']['pretrained_model']),strict=False)
     net.to(device).eval()
 
     batch_fnames,batch_imgs,batch_raw_imgs = [],[],[]
@@ -201,14 +204,14 @@ if __name__=='__main__':
             np.save(os.path.join(config['data']['dst_label_path'], fname+'.npy'), pt)
             print('{}, {}'.format(os.path.join(config['data']['dst_label_path'], fname+'.npy'), len(pt)))
 
-        # ## debug
+        ### debug
         # for img, pts in zip(batch_raw_imgs,points):
         #     debug_img = cv2.merge([img, img, img])
         #     for pt in pts:
         #         cv2.circle(debug_img, (int(pt[1]),int(pt[0])), 1, (0,255,0), thickness=-1)
         #     plt.imshow(debug_img)
-        #     plt.show()
-        # if idx>=2:
+        #     plt.savefig('./data/sample/{}.png'.format(fname))
+        # if idx>=10:
         #     break
         batch_fnames,batch_imgs,batch_raw_imgs = [],[],[]
     print('Done')
